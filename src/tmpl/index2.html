@@ -1,0 +1,31 @@
+<!--@+leo-ver=4-thin-->
+<!--@+node:tbrown.20080122142045.43:@thin index2.html-->
+<!--@@language html-->
+<!DOCTYPE xml>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:py="http://genshi.edgewall.org/">
+  <xi:include href="layout.html" />
+  <?python
+       v=value_of
+       import time
+       from genshi import HTML
+  ?>
+  <!--!<?python v=value_of; import time; from drender import Mode ?> -->
+  <!--@  @+others-->
+  <!--@+node:tbrown.20080122142045.44:head-->
+  <head>
+    <title>News</title>
+  </head>
+  <!--@nonl-->
+  <!--@+node:tbrown.20080122142045.45:body-->
+  <body class="index">
+    <h1>Class editing</h1>
+    <div class='dirent'><div>${first}</div></div>
+  </body>
+  <!--@-node:tbrown.20080122142045.45:body-->
+  <!--@-node:tbrown.20080122142045.44:head-->
+  <!--@-others-->
+</html>
+<!--@-node:tbrown.20080122142045.43:@thin index2.html-->
+<!--@-leo-->
