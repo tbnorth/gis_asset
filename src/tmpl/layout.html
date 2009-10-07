@@ -1,12 +1,7 @@
-<!--@+leo-ver=4-thin-->
-<!--@+node:tbrown.20080122142053:@thin layout.html-->
-<!--@@language html-->
 <!DOCTYPE xml>
 <html xmlns="http://www.w3.org/1999/xhtml"
       xmlns:py="http://genshi.edgewall.org/" py:strip="">
   <?python v=value_of; import time?>
-  <!--@  @+others-->
-  <!--@+node:tbrown.20080122142053.1:head-->
   <py:match path="head">
     <head py:attrs="select('@*')">
       <py:if test="v('jscripts',[])">
@@ -22,35 +17,21 @@
         rel="stylesheet" type='text/javascript' href="${url('/css/'+i)}"/>
       ${select('node()')}
     </head>
+    </py:match>
+    <py:match path="body">
+      <body py:attrs="select('@*')">
+        <div class="sections">${select('node()')}</div>
+        <div class="site-footer">Generated ${time.ctime()}</div>
+      </body>
+    </py:match>
+    <py:match path="xh1">
+      <div class="h1">
+        <h1 py:attrs="select('@*')" >${select('node()')}</h1>
+      </div>
+    </py:match>
+    <py:match path="NOTp">
+      <div py:for="i in range(2)" class="slide" style="border: solid red 3px;">
+        <p py:attrs="select('@*')">${i}. ${select('node()')}</p>
+      </div>
   </py:match>
-  <!--@nonl-->
-  <!--@-node:tbrown.20080122142053.1:head-->
-  <!--@+node:tbrown.20080122142053.2:body-->
-  <py:match path="body">
-    <body py:attrs="select('@*')">
-      <div class="sections">${select('node()')}</div>
-      <div class="site-footer">Generated ${time.ctime()}</div>
-    </body>
-  </py:match>
-  <!--@nonl-->
-  <!--@-node:tbrown.20080122142053.2:body-->
-  <!--@+node:tbrown.20080122142053.3:section-->
-  <py:match path="xh1">
-    <div class="h1">
-      <h1 py:attrs="select('@*')" >${select('node()')}</h1>
-    </div>
-  </py:match>
-  <!--@nonl-->
-  <!--@-node:tbrown.20080122142053.3:section-->
-  <!--@+node:tbrown.20080122142053.4:NOTp-->
-  <py:match path="NOTp">
-    <div py:for="i in range(2)" class="slide" style="border: solid red 3px;">
-      <p py:attrs="select('@*')">${i}. ${select('node()')}</p>
-    </div>
-  </py:match>
-  <!--@nonl-->
-  <!--@-node:tbrown.20080122142053.4:NOTp-->
-  <!--@-others-->
 </html>
-<!--@-node:tbrown.20080122142053:@thin layout.html-->
-<!--@-leo-->

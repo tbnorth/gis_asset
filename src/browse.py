@@ -23,12 +23,12 @@ import glob
 class Index:
     def __init__(self):
         self.counter = 0
-        self.basedir = '/'
+        self.basedir = '/home/tbrown/gis'
     @cherrypy.expose
     @template.output('index2.html')
     def index(self):
         first = HTML(self.dirent())
-        return dict(first='/', jscripts=["browse.js"])
+        return dict(first="GISLAB", jscripts=["browse.js"])
     @cherrypy.expose
     @template.output('dirent.html')
     def direntold(self):
@@ -39,7 +39,8 @@ class Index:
     @cherrypy.expose
     @template.output('dirent.html')
     def dirent(self, *args):
-        path = '/'+'/'.join(args)+'/*'
+        path = self.basedir+'/'+'/'.join(args[1:])+'/*'
+        print path
         entries = [{'name': os.path.basename(i),
                     'type': 'd' if os.path.isdir(i) else 'f'
                     } for i in glob.glob(path)]
