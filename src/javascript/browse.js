@@ -21,9 +21,12 @@ function init_dirents() {
     jQ('.dirent').bind('click', dirop);
 }
 function dirop(event) {
+    // note - triggered by the dirent that exists at the start
+    // as those added later don't have click() bound, but
+    // the first one contains all the latter ones.
 
     var targ = jQ(event.target);
-    if (event.ctrlKey) {
+    if (event.ctrlKey) {  // reload
         targ.children().remove();
     }
     if (targ.children().length > 0) {
