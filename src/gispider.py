@@ -33,7 +33,7 @@ class OgrFinder(object):
             if os.path.isdir(path) and datasrc.GetDriver().GetName() == 'AVCBin':
                     yield {
                         'path':path,
-                        'type':'AVCBin',
+                        'format':'AVCBin',
                         'geomType':ogr.wkbGeometryCollection,
                         'geomText':self.GeomText[ogr.wkbGeometryCollection],
 
@@ -81,15 +81,15 @@ for base, dirs, files in os.walk(STARTDIR):
     for dir_ in dirs:
         path = os.path.join(base, dir_)
 
-        for l in ofinder.findOn(path):
-            pprint(l)
-
         skipDir = False
         for l in gfinder.findOn(path):
             pprint(l)
             skipDir = True
         if skipDir:
             dirs.remove(dir_)
+
+        for l in ofinder.findOn(path):
+            pprint(l)
 
     for f in files:
         for l in gfinder.findOn(os.path.join(base,f)):
