@@ -11,6 +11,7 @@ import os, sys
 from pprint import pprint
 
 STARTDIR = "/home/tbrown/Desktop/Proj/GISLab"
+STARTDIR = sys.argv[1]
 
 class OgrFinder(object):
 
@@ -64,7 +65,10 @@ class GdalFinder(object):
 
     def findOn(self,path):
 
+        stderr = sys.stderr
+        sys.stderr = None
         datasrc = gdal.OpenShared(path)
+        sys.stderr = stderr
 
         if datasrc:
 
@@ -76,22 +80,23 @@ class GdalFinder(object):
 ofinder = OgrFinder()
 gfinder = GdalFinder()
 
-for base, dirs, files in os.walk(STARTDIR):
+for base, dirs, files in os.walk(STARTDIR, topdown=True):
 
+    culls = set()
     for dir_ in dirs:
         path = os.path.join(base, dir_)
 
-        skipDir = False
         for l in gfinder.findOn(path):
-            pprint(l)
-            skipDir = True
-        if skipDir:
-            dirs.remove(dir_)
+            pprint(('DG',l))
+            culls.add(dir_)
 
         for l in ofinder.findOn(path):
-            pprint(l)
+            pprint(('DO',l))
+
+    for cull in culls:
+        dirs.remove(cull)
 
     for f in files:
         for l in gfinder.findOn(os.path.join(base,f)):
-            pprint(l)
+            pprint(('FG', base, path, f, l))
 
