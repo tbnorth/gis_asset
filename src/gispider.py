@@ -22,6 +22,7 @@ class OgrFinder(object):
     ]
 
     # text lookup table for GeomType returns
+    # {1: 'Point', 2: 'LineString', ...}
     GeomText = dict([(ogr.__dict__[i], i[3:]) for i in ogr.__dict__
         if i.startswith('wkb')])
 
@@ -36,37 +37,48 @@ class OgrFinder(object):
                         'path':path,
                         'format':'AVCBin',
                         'geomType':ogr.wkbGeometryCollection,
-                        'geomText':self.GeomText[ogr.wkbGeometryCollection],
-
+                        'geomText':self.GeomText[ogr.wkbGeometryCollection]
                     }
             else:
 
-                for sublayer in range(datasrc.GetLayerCount()):
-                    layer = datasrc.GetLayer(sublayer)
-                    for ext in self.EXTENSIONS:
-                        path2 = os.path.join(datasrc.GetName(), layer.GetName()+ext)
-                        datasrc2 = ogr.OpenShared(path2)
-                        if datasrc2:
-                            break
-                        path2 = os.path.join(datasrc.GetName(), layer.GetName().lower()+ext)
-                        datasrc2 = ogr.OpenShared(path2)
-                        if datasrc2:
-                            break
-                    else:
-                        print "NO FILE FOR ", layer.GetName()
-                    assert  datasrc2.GetLayerCount() == 1
+                for sublayer_n in range(datasrc.GetLayerCount()):
+                    sublayer = datasrc.GetLayer(sublayer_n)
+                    # for ext in self.EXTENSIONS:
+                    #     path2 = os.path.join(datasrc.GetName(), layer.GetName()+ext)
+                    #     datasrc2 = ogr.OpenShared(path2)
+                    #     if datasrc2:
+                    #         break
+                    #     path2 = os.path.join(datasrc.GetName(), layer.GetName().lower()+ext)
+                    #     datasrc2 = ogr.OpenShared(path2)
+                    #     if datasrc2:
+                    #         break
+                    # else:
+                    #     print "NO FILE FOR", layer.GetName()
+                    # assert datasrc2.GetLayerCount() == 1
+
+                    # yield {
+                    #     'path':path2,
+                    #     'format':datasrc2.GetDriver().GetName(),
+                    #     'geomText':self.GeomText[layer.GetLayerDefn().GetGeomType()],
+                    #     'geomType':layer.GetLayerDefn().GetGeomType(),
+                    # }   
+
                     yield {
-                        'path':path2,
-                        'format':datasrc2.GetDriver().GetName(),
-                        'geomText':self.GeomText[layer.GetLayerDefn().GetGeomType()],
-                        'geomType':layer.GetLayerDefn().GetGeomType(),
+                        'path':path,
+                        'layer':sublayer.GetName(),
+                        'format':datasrc.GetDriver().GetName(),
+                        'geomText':self.GeomText[sublayer.GetLayerDefn().GetGeomType()],
+                        'geomType':sublayer.GetLayerDefn().GetGeomType(),
                     }
 class GdalFinder(object):
+
+    def __init__(self):
+        self.devnull = open('/dev/null','w')
 
     def findOn(self,path):
 
         stderr = sys.stderr
-        sys.stderr = None
+        sys.stderr = self.devnull
         datasrc = gdal.OpenShared(path)
         sys.stderr = stderr
 
@@ -98,5 +110,8 @@ for base, dirs, files in os.walk(STARTDIR, topdown=True):
 
     for f in files:
         for l in gfinder.findOn(os.path.join(base,f)):
-            pprint(('FG', base, path, f, l))
+            pprint(('FG', l))
+        for l in ofinder.findOn(os.path.join(base,f)):
+            pprint(('FO', l))
+
 
