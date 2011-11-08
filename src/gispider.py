@@ -7,9 +7,36 @@ except ImportError:
     import osr
     import ogr
 
-import os, sys
+import os, sys, glob
 from pprint import pprint
 
+def os_walk(path, topdown=None):
+    """Implement os.walk to avoid UnicodeDecode errors,
+    or at least trap them.
+    
+    Assumes top down.
+    """
+    
+    dirs = []
+    files = []
+    
+
+    for i in glob.glob(os.path.join(path, '*')):
+
+        if os.path.isdir(i):
+            dirs.append(os.path.basename(i))
+        elif os.path.isfile(i):
+            files.append(os.path.basename(i))
+            
+    yield path, dirs, files
+        
+    for d in dirs:
+        
+        try:
+            for i in os_walk(os.path.join(path, d)):
+                yield i
+        except UnicodeDecodeError:
+            print("BAD DIRECTORY %r / %r" % (path, d))
 class OgrFinder(object):
 
     EXTENSIONS = [
@@ -52,12 +79,16 @@ class OgrFinder(object):
         if datasrc and datasrc.GetLayerCount():
 
             if os.path.isdir(path) and datasrc.GetDriver().GetName() == 'AVCBin':
-                    yield {
-                        'path':path,
-                        'format':'AVCBin',
-                        'geomType':ogr.wkbGeometryCollection,
-                        'geomText':self.GeomText[ogr.wkbGeometryCollection]
-                    }
+                    try:
+                        ascii_path = path.encode('ascii')
+                        yield {
+                            'path':ascii_path,
+                            'format':'AVCBin',
+                            'geomType':ogr.wkbGeometryCollection,
+                            'geomText':self.GeomText[ogr.wkbGeometryCollection]
+                        }
+                    except UnicodeDecodeError:
+                        pass
             else:
 
                 for sublayer_n in range(datasrc.GetLayerCount()):
@@ -81,14 +112,18 @@ class OgrFinder(object):
                     #     'geomText':self.GeomText[layer.GetLayerDefn().GetGeomType()],
                     #     'geomType':layer.GetLayerDefn().GetGeomType(),
                     # }   
-
-                    yield {
-                        'path':path,
-                        'layer':sublayer.GetName(),
-                        'format':datasrc.GetDriver().GetName(),
-                        'geomText':self.GeomText[sublayer.GetLayerDefn().GetGeomType()],
-                        'geomType':sublayer.GetLayerDefn().GetGeomType(),
-                    }
+                    
+                    try:
+                        ascii_path = path.encode('ascii')
+                        yield {
+                            'path':ascii_path,
+                            'layer':sublayer.GetName(),
+                            'format':datasrc.GetDriver().GetName(),
+                            'geomText':self.GeomText[sublayer.GetLayerDefn().GetGeomType()],
+                            'geomType':sublayer.GetLayerDefn().GetGeomType(),
+                        }
+                    except UnicodeDecodeError:
+                        pass
 class GdalFinder(object):
 
     def __init__(self):
@@ -116,9 +151,14 @@ def search_path(startdir, use_gdal=True, use_ogr=True,
     if use_ogr:
         ofinder = OgrFinder()
     
-    for base, dirs, files in os.walk(startdir, topdown=True):
-    
+    for base, dirs, files in os_walk(startdir.encode('utf-8'), topdown=True):
+
         culls = set()
+        #X[i for i in dirs
+        #X             if not all([ord(j) < 128 for j in i])])
+                     
+        #Xfiles = [i for i in files
+        #X             if all([ord(j) < 128 for j in i])]
         
         if use_dir:
             for dir_ in dirs:
@@ -144,6 +184,12 @@ def search_path(startdir, use_gdal=True, use_ogr=True,
         if use_file:
             
             for f in files:
+                
+                #Xtry:
+                #X    s = base.encode('ascii')
+                #X    s = f.encode('ascii')
+                #Xexcept (UnicodeDecodeError, UnicodeEncodeError):
+                #X    continue
                 
                 if (extensions and
                     os.path.splitext(f)[1].lower() not in extensions):
