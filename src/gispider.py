@@ -56,6 +56,8 @@ class OgrFinder(object):
     @staticmethod
     def get_table_info(path):
         dataset = ogr.Open(path)
+        if not dataset:
+            return {}
         layer = dataset.GetLayer(0)
         d = {
             'records': layer.GetFeatureCount(),
