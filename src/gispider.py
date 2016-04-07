@@ -16,7 +16,7 @@ def os_walk(path, topdown=None):
     """Implement os.walk to avoid UnicodeDecode errors,
     or at least trap them.
     
-    Assumes top down.
+    Assumes top down, parameter just for compatibility.
     """
     
     dirs = []
@@ -275,7 +275,6 @@ def search_path(
 def main():
     import sys
     
-    STARTDIR = "/home/tbrown/Desktop/Proj/GISLab"
     STARTDIR = sys.argv[1]
     
     for i in search_path(
