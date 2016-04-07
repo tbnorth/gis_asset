@@ -69,7 +69,7 @@ def startup():
   countervds = 0
   writer = XMLWriter()
   writer.push("DataCatalogue")
-#  walkerlist = list(copy.pathwalker)
+  # walkerlist = list(copy.pathwalker)
   processStats(writer, walkers[1], skiplist, startpath)
   for eachpath in walkers[0]:
     startdir = eachpath[0]
