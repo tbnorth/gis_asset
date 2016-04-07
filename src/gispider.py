@@ -142,9 +142,10 @@ class GdalFinder(object):
         
 
     def __init__(self):
-        self.devnull = open('/dev/null','w')
-        pass
-
+        try:
+            self.devnull = open('/dev/null', 'w')
+        except IOError:
+            self.devnull = open('nul:', 'w')
     @staticmethod
     def get_table_info(path):
         dataset = gdal.OpenShared(path)
