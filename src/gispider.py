@@ -7,7 +7,7 @@ except ImportError:
     import osr
     import ogr
 
-import os, sys, glob
+import os, sys, glob, json
 from pprint import pprint
 
 import time
@@ -15,24 +15,24 @@ open_time = {}
 def os_walk(path, topdown=None):
     """Implement os.walk to avoid UnicodeDecode errors,
     or at least trap them.
-    
+
     Assumes top down, parameter just for compatibility.
     """
-    
+
     dirs = []
     files = []
-    
+
     for i in glob.glob(os.path.join(path, '*')):
 
         if os.path.isdir(i):
             dirs.append(os.path.basename(i))
         elif os.path.isfile(i):
             files.append(os.path.basename(i))
-            
+
     yield path, dirs, files
-        
+
     for d in dirs:
-        
+
         try:
             for i in os_walk(os.path.join(path, d)):
                 yield i
@@ -73,7 +73,7 @@ class OgrFinder(object):
         return d
 
     def findOn(self, path):
-        
+
         if path.lower().endswith('.shx'):
             return
 
@@ -118,8 +118,8 @@ class OgrFinder(object):
                     #     'format':datasrc2.GetDriver().GetName(),
                     #     'geomText':self.GeomText[layer.GetLayerDefn().GetGeomType()],
                     #     'geomType':layer.GetLayerDefn().GetGeomType(),
-                    # }   
-                    
+                    # }
+
                     try:
                         ascii_path = path.encode('ascii')
                         yield {
@@ -133,13 +133,13 @@ class OgrFinder(object):
                     except UnicodeDecodeError:
                         pass
 class GdalFinder(object):
-    
+
     # text lookup table for Type returns
     # {1: 'Point', 2: 'LineString', ...}
 
     RATTypeText = dict([(gdal.__dict__[i], i[4:]) for i in gdal.__dict__
         if i.startswith('GFT_')])
-        
+
 
     def __init__(self):
         try:
@@ -153,7 +153,7 @@ class GdalFinder(object):
         table = layer.GetDefaultRAT()
         if not table:
             return {'records': 0, 'attrib': []}
-            
+
         d = {
             'records': table.GetRowCount(),
             'attrib': [],
@@ -204,15 +204,15 @@ class GdalFinder(object):
             }
 
 def search_path(
-    startdir, 
-    use_gdal_on=('file', 'dir'), 
-    gdal_extensions=[], 
-    gdal_exclude=['.aux', '.ovr'], 
-    use_ogr_on=('file',), 
+    startdir,
+    use_gdal_on=('file', 'dir'),
+    gdal_extensions=[],
+    gdal_exclude=['.aux', '.ovr'],
+    use_ogr_on=('file',),
     ogr_extensions=['.dbf', '.kml', '.gpx',],
     ogr_exclude=[],
     ):
-    
+
     if use_gdal_on:
         gfinder = GdalFinder()
     if use_ogr_on:
@@ -221,14 +221,14 @@ def search_path(
     use_file = 'file' in use_gdal_on or 'file' in use_ogr_on
 
     for base, dirs, files in os_walk(startdir.encode('utf-8'), topdown=True):
-        
-        # print "%s: %d dirs, %d files" % (base, len(dirs), len(files))        
+
+        # print "%s: %d dirs, %d files" % (base, len(dirs), len(files))
 
         culls = set()  # don't descend dirs recognized as data sources
-        
+
         if use_dir:
             for dir_ in dirs:
-                
+
                 path = os.path.join(base, dir_)
 
                 if 'dir' in use_gdal_on:
@@ -237,7 +237,7 @@ def search_path(
                         d['find_type'] ='GDAL dir'
                         yield d
                         culls.add(dir_)
-        
+
                 if 'dir' in use_ogr_on:
                     for l in ofinder.findOn(path):
                         d = dict(l)
@@ -247,23 +247,23 @@ def search_path(
 
         for cull in culls:
             dirs.remove(cull)
-    
+
         if use_file:
-            
+
             for f in files:
-                
+
                 ext = os.path.splitext(f)[1].lower()
-                
+
                 path = os.path.join(base, f)
 
                 if ('file' in use_gdal_on and ext not in gdal_exclude and
                     (not gdal_extensions or ext in gdal_extensions)):
-                        
+
                     for l in gfinder.findOn(path):
                         d = dict(l)
                         d['find_type'] ='GDAL file'
                         yield d
-                        
+
                 if ('file' in use_ogr_on and ext not in ogr_exclude and
                     (not ogr_extensions or ext in ogr_extensions)):
 
@@ -274,9 +274,13 @@ def search_path(
 
 def main():
     import sys
-    
+
     STARTDIR = sys.argv[1]
-    
+
+    print "["
+
+    count = 0
+
     for i in search_path(
         STARTDIR,
         use_gdal_on=('dir', 'file'), # 'dir',
@@ -284,20 +288,35 @@ def main():
         ogr_extensions=['.dbf', '.shp', '.kml', '.gpx', ],
         ):
 
+
         # if not i['path'].lower().endswith('.dbf'):
         #     continue
-        pprint(i)
-        
+        # print(json.dumps(i))
+
         if 'OGR' in i['find_type']:
             open_time['OGR TABLE '+i['path']] = time.time()
-            pprint(OgrFinder.get_table_info(i['path']))
+            record = OgrFinder.get_table_info(i['path'])
             open_time['OGR TABLE '+i['path']] = time.time() - open_time['OGR TABLE '+i['path']]
         else:
             open_time['GDAL TABLE '+i['path']] = time.time()
-            pprint(GdalFinder.get_table_info(i['path']))
+            record = GdalFinder.get_table_info(i['path'])
             open_time['GDAL TABLE '+i['path']] = time.time() - open_time['GDAL TABLE '+i['path']]
+
+        if record['attrib']:
+            record.update(i)
+            if count:
+                print ','
+            print(json.dumps(record))
+            count += 1
+            if count > 100:
+                break
+
+        sys.stderr.write("%s %s\n" % (count, i['path']))
 
         top = sorted([(v,k) for k,v in open_time.items()], reverse=True)
         # pprint(top[:5])
+
+
+    print "]"
 if __name__ == '__main__':
     main()
