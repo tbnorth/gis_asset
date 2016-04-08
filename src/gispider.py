@@ -149,8 +149,11 @@ class GdalFinder(object):
     @staticmethod
     def get_table_info(path):
         dataset = gdal.OpenShared(path)
-        layer = dataset.GetRasterBand(1)
-        table = layer.GetDefaultRAT()
+        if dataset:
+            layer = dataset.GetRasterBand(1)
+            table = layer.GetDefaultRAT()
+        else:
+            table = None
         if not table:
             return {'records': 0, 'attrib': []}
 
@@ -184,7 +187,7 @@ class GdalFinder(object):
             cellsx, cellsy = datasrc.RasterXSize, datasrc.RasterYSize
             bands = datasrc.RasterCount
 
-            geom_type = datasrc.GetRasterBand(1).DataType
+            geom_type = datasrc.GetRasterBand(1) and datasrc.GetRasterBand(1).DataType
 
             yield {
                 'name': os.path.basename(path),
@@ -309,7 +312,8 @@ def main():
             print(json.dumps(record))
             count += 1
             if count > 100:
-                break
+                pass
+                # break
 
         sys.stderr.write("%s %s\n" % (count, i['path']))
 
