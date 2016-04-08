@@ -298,22 +298,22 @@ def main():
 
         if 'OGR' in i['find_type']:
             open_time['OGR TABLE '+i['path']] = time.time()
-            record = OgrFinder.get_table_info(i['path'])
+            table_info = OgrFinder.get_table_info(i['path'])
             open_time['OGR TABLE '+i['path']] = time.time() - open_time['OGR TABLE '+i['path']]
         else:
             open_time['GDAL TABLE '+i['path']] = time.time()
-            record = GdalFinder.get_table_info(i['path'])
+            table_info = GdalFinder.get_table_info(i['path'])
             open_time['GDAL TABLE '+i['path']] = time.time() - open_time['GDAL TABLE '+i['path']]
 
-        if record['attrib']:
-            record.update(i)
-            if count:
-                print ','
-            print(json.dumps(record))
-            count += 1
-            if count > 100:
-                pass
-                # break
+        i['table_info'] = table_info
+
+        if count:
+            print ','
+        print(json.dumps(i))
+        count += 1
+        if count > 100:
+            pass
+            # break
 
         sys.stderr.write("%s %s\n" % (count, i['path']))
 
