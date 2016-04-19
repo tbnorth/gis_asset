@@ -54,11 +54,14 @@ class OgrFinder(object):
         if i.startswith('OFT')])
 
     @staticmethod
-    def get_table_info(path):
+    def get_table_info(path, layer=None):
         dataset = ogr.Open(path)
         if not dataset:
             return {}
-        layer = dataset.GetLayer(0)
+        if layer:
+            layer = dataset.GetLayer(layer)
+        else:
+            layer = dataset.GetLayer(0)
         d = {
             'records': layer.GetFeatureCount(),
             'attrib': [],
@@ -147,10 +150,13 @@ class GdalFinder(object):
         except IOError:
             self.devnull = open('nul:', 'w')
     @staticmethod
-    def get_table_info(path):
+    def get_table_info(path, layer=None):
         dataset = gdal.OpenShared(path)
         if dataset:
-            layer = dataset.GetRasterBand(1)
+            if layer:
+                layer = dataset.GetRasterBand(layer)
+            else:
+                layer = dataset.GetRasterBand(1)
             table = layer.GetDefaultRAT()
         else:
             table = None
@@ -288,7 +294,10 @@ def main():
         STARTDIR,
         use_gdal_on=('dir', 'file'), # 'dir',
         use_ogr_on=('file',), # 'file',
-        ogr_extensions=['.dbf', '.shp', '.kml', '.gpx', ],
+        ogr_extensions=[
+            '.csv', '.dbf', '.shp', '.kml', '.gpx', '.xls', '.xlsx',
+            '.mdb',
+        ],
         ):
 
 
@@ -298,11 +307,11 @@ def main():
 
         if 'OGR' in i['find_type']:
             open_time['OGR TABLE '+i['path']] = time.time()
-            table_info = OgrFinder.get_table_info(i['path'])
+            table_info = OgrFinder.get_table_info(i['path'], i.get('layer'))
             open_time['OGR TABLE '+i['path']] = time.time() - open_time['OGR TABLE '+i['path']]
         else:
             open_time['GDAL TABLE '+i['path']] = time.time()
-            table_info = GdalFinder.get_table_info(i['path'])
+            table_info = GdalFinder.get_table_info(i['path'], i.get('layer'))
             open_time['GDAL TABLE '+i['path']] = time.time() - open_time['GDAL TABLE '+i['path']]
 
         i['table_info'] = table_info
