@@ -11,7 +11,10 @@ import os, sys, glob, json
 from pprint import pprint
 
 import time
+
 open_time = {}
+
+
 def os_walk(path, topdown=None):
     """Implement os.walk to avoid UnicodeDecode errors,
     or at least trap them.
@@ -37,7 +40,9 @@ def os_walk(path, topdown=None):
             for i in os_walk(os.path.join(path, d)):
                 yield i
         except UnicodeDecodeError:
-            print("BAD DIRECTORY %r / %r" % (path, d))
+            print ("BAD DIRECTORY %r / %r" % (path, d))
+
+
 class OgrFinder(object):
 
     EXTENSIONS = [
@@ -48,10 +53,12 @@ class OgrFinder(object):
 
     # text lookup table for GeomType returns
     # {1: 'Point', 2: 'LineString', ...}
-    GeomText = dict([(ogr.__dict__[i], i[3:]) for i in ogr.__dict__
-        if i.startswith('wkb')])
-    TypeText = dict([(ogr.__dict__[i], i[3:]) for i in ogr.__dict__
-        if i.startswith('OFT')])
+    GeomText = dict(
+        [(ogr.__dict__[i], i[3:]) for i in ogr.__dict__ if i.startswith('wkb')]
+    )
+    TypeText = dict(
+        [(ogr.__dict__[i], i[3:]) for i in ogr.__dict__ if i.startswith('OFT')]
+    )
 
     @staticmethod
     def get_table_info(path, layer=None):
@@ -69,10 +76,12 @@ class OgrFinder(object):
         schema = layer.GetLayerDefn()
         for i in range(0, schema.GetFieldCount()):
             fld = schema.GetFieldDefn(i)
-            d['attrib'].append({
-                'name': fld.GetNameRef(),
-                'type': OgrFinder.TypeText.get(fld.GetType(), None),
-            })
+            d['attrib'].append(
+                {
+                    'name': fld.GetNameRef(),
+                    'type': OgrFinder.TypeText.get(fld.GetType(), None),
+                }
+            )
         return d
 
     def findOn(self, path):
@@ -80,25 +89,28 @@ class OgrFinder(object):
         if path.lower().endswith('.shx'):
             return
 
-        open_time['OGR '+path] = time.time()
+        open_time['OGR ' + path] = time.time()
 
         datasrc = ogr.OpenShared(path)
 
-        open_time['OGR '+path] = time.time() - open_time['OGR '+path]
+        open_time['OGR ' + path] = time.time() - open_time['OGR ' + path]
 
         if datasrc and datasrc.GetLayerCount():
 
-            if os.path.isdir(path) and datasrc.GetDriver().GetName() == 'AVCBin':
-                    try:
-                        ascii_path = path.encode('ascii')
-                        yield {
-                            'path':ascii_path,
-                            'format':'AVCBin',
-                            'geomType':ogr.wkbGeometryCollection,
-                            'geomText':self.GeomText[ogr.wkbGeometryCollection]
-                        }
-                    except UnicodeDecodeError:
-                        pass
+            if (
+                os.path.isdir(path)
+                and datasrc.GetDriver().GetName() == 'AVCBin'
+            ):
+                try:
+                    ascii_path = path.encode('ascii')
+                    yield {
+                        'path': ascii_path,
+                        'format': 'AVCBin',
+                        'geomType': ogr.wkbGeometryCollection,
+                        'geomText': self.GeomText[ogr.wkbGeometryCollection],
+                    }
+                except UnicodeDecodeError:
+                    pass
             else:
 
                 for sublayer_n in range(datasrc.GetLayerCount()):
@@ -126,29 +138,38 @@ class OgrFinder(object):
                     try:
                         ascii_path = path.encode('ascii')
                         yield {
-                            'path':ascii_path,
-                            'name':sublayer.GetName(),
-                            'layer':sublayer.GetName(),
-                            'format':datasrc.GetDriver().GetName(),
-                            'geomText':self.GeomText[sublayer.GetLayerDefn().GetGeomType()],
-                            'geomType':sublayer.GetLayerDefn().GetGeomType(),
+                            'path': ascii_path,
+                            'name': sublayer.GetName(),
+                            'layer': sublayer.GetName(),
+                            'format': datasrc.GetDriver().GetName(),
+                            'geomText': self.GeomText[
+                                sublayer.GetLayerDefn().GetGeomType()
+                            ],
+                            'geomType': sublayer.GetLayerDefn().GetGeomType(),
                         }
                     except UnicodeDecodeError:
                         pass
+
+
 class GdalFinder(object):
 
     # text lookup table for Type returns
     # {1: 'Point', 2: 'LineString', ...}
 
-    RATTypeText = dict([(gdal.__dict__[i], i[4:]) for i in gdal.__dict__
-        if i.startswith('GFT_')])
-
+    RATTypeText = dict(
+        [
+            (gdal.__dict__[i], i[4:])
+            for i in gdal.__dict__
+            if i.startswith('GFT_')
+        ]
+    )
 
     def __init__(self):
         try:
             self.devnull = open('/dev/null', 'w')
         except IOError:
             self.devnull = open('nul:', 'w')
+
     @staticmethod
     def get_table_info(path, layer=None):
         dataset = gdal.OpenShared(path)
@@ -170,22 +191,26 @@ class GdalFinder(object):
         # schema = layer.GetLayerDefn()
         for i in range(0, table.GetColumnCount()):
             # fld = schema.GetFieldDefn(i)
-            d['attrib'].append({
-                'name': table.GetNameOfCol(i),
-                'type': GdalFinder.RATTypeText.get(table.GetTypeOfCol(i), None),
-            })
+            d['attrib'].append(
+                {
+                    'name': table.GetNameOfCol(i),
+                    'type': GdalFinder.RATTypeText.get(
+                        table.GetTypeOfCol(i), None
+                    ),
+                }
+            )
         return d
 
     def findOn(self, path):
 
-        open_time['GDAL '+path] = time.time()
+        open_time['GDAL ' + path] = time.time()
 
         stderr = sys.stderr
         sys.stderr = self.devnull
         datasrc = gdal.OpenShared(path)
         sys.stderr = stderr
 
-        open_time['GDAL '+path] = time.time() - open_time['GDAL '+path]
+        open_time['GDAL ' + path] = time.time() - open_time['GDAL ' + path]
 
         if datasrc:
 
@@ -193,7 +218,9 @@ class GdalFinder(object):
             cellsx, cellsy = datasrc.RasterXSize, datasrc.RasterYSize
             bands = datasrc.RasterCount
 
-            geom_type = datasrc.GetRasterBand(1) and datasrc.GetRasterBand(1).DataType
+            geom_type = (
+                datasrc.GetRasterBand(1) and datasrc.GetRasterBand(1).DataType
+            )
 
             yield {
                 'name': os.path.basename(path),
@@ -212,6 +239,7 @@ class GdalFinder(object):
                 'srid': -1,  # FIXME
             }
 
+
 def search_path(
     startdir,
     use_gdal_on=('file', 'dir'),
@@ -220,7 +248,7 @@ def search_path(
     use_ogr_on=('file',),
     ogr_extensions=['.dbf', '.kml', '.gpx',],
     ogr_exclude=[],
-    ):
+):
 
     if use_gdal_on:
         gfinder = GdalFinder()
@@ -243,14 +271,14 @@ def search_path(
                 if 'dir' in use_gdal_on:
                     for l in gfinder.findOn(path):
                         d = dict(l)
-                        d['find_type'] ='GDAL dir'
+                        d['find_type'] = 'GDAL dir'
                         yield d
                         culls.add(dir_)
 
                 if 'dir' in use_ogr_on:
                     for l in ofinder.findOn(path):
                         d = dict(l)
-                        d['find_type'] ='OGR dir'
+                        d['find_type'] = 'OGR dir'
                         yield d
                         culls.add(dir_)
 
@@ -265,21 +293,28 @@ def search_path(
 
                 path = os.path.join(base, f)
 
-                if ('file' in use_gdal_on and ext not in gdal_exclude and
-                    (not gdal_extensions or ext in gdal_extensions)):
+                if (
+                    'file' in use_gdal_on
+                    and ext not in gdal_exclude
+                    and (not gdal_extensions or ext in gdal_extensions)
+                ):
 
                     for l in gfinder.findOn(path):
                         d = dict(l)
-                        d['find_type'] ='GDAL file'
+                        d['find_type'] = 'GDAL file'
                         yield d
 
-                if ('file' in use_ogr_on and ext not in ogr_exclude and
-                    (not ogr_extensions or ext in ogr_extensions)):
+                if (
+                    'file' in use_ogr_on
+                    and ext not in ogr_exclude
+                    and (not ogr_extensions or ext in ogr_extensions)
+                ):
 
                     for l in ofinder.findOn(path):
                         d = dict(l)
-                        d['find_type'] ='OGR file'
+                        d['find_type'] = 'OGR file'
                         yield d
+
 
 def main():
     import sys
@@ -292,33 +327,42 @@ def main():
 
     for i in search_path(
         STARTDIR,
-        use_gdal_on=('dir', 'file'), # 'dir',
-        use_ogr_on=('file',), # 'file',
+        use_gdal_on=('dir', 'file'),  # 'dir',
+        use_ogr_on=('file',),  # 'file',
         ogr_extensions=[
-            '.csv', '.dbf', '.shp', '.kml', '.gpx', '.xls', '.xlsx',
+            '.csv',
+            '.dbf',
+            '.shp',
+            '.kml',
+            '.gpx',
+            '.xls',
+            '.xlsx',
             '.mdb',
         ],
-        ):
-
+    ):
 
         # if not i['path'].lower().endswith('.dbf'):
         #     continue
         # print(json.dumps(i))
 
         if 'OGR' in i['find_type']:
-            open_time['OGR TABLE '+i['path']] = time.time()
+            open_time['OGR TABLE ' + i['path']] = time.time()
             table_info = OgrFinder.get_table_info(i['path'], i.get('layer'))
-            open_time['OGR TABLE '+i['path']] = time.time() - open_time['OGR TABLE '+i['path']]
+            open_time['OGR TABLE ' + i['path']] = (
+                time.time() - open_time['OGR TABLE ' + i['path']]
+            )
         else:
-            open_time['GDAL TABLE '+i['path']] = time.time()
+            open_time['GDAL TABLE ' + i['path']] = time.time()
             table_info = GdalFinder.get_table_info(i['path'], i.get('layer'))
-            open_time['GDAL TABLE '+i['path']] = time.time() - open_time['GDAL TABLE '+i['path']]
+            open_time['GDAL TABLE ' + i['path']] = (
+                time.time() - open_time['GDAL TABLE ' + i['path']]
+            )
 
         i['table_info'] = table_info
 
         if count:
             print ','
-        print(json.dumps(i))
+        print (json.dumps(i))
         count += 1
         if count > 100:
             pass
@@ -326,10 +370,11 @@ def main():
 
         sys.stderr.write("%s %s\n" % (count, i['path']))
 
-        top = sorted([(v,k) for k,v in open_time.items()], reverse=True)
+        top = sorted([(v, k) for k, v in open_time.items()], reverse=True)
         # pprint(top[:5])
 
-
     print "]"
+
+
 if __name__ == '__main__':
     main()
