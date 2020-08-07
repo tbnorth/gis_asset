@@ -40,7 +40,7 @@ def os_walk(path, topdown=None):
             for i in os_walk(os.path.join(path, d)):
                 yield i
         except UnicodeDecodeError:
-            print ("BAD DIRECTORY %r / %r" % (path, d))
+            print("BAD DIRECTORY %r / %r" % (path, d))
 
 
 class OgrFinder(object):
@@ -104,7 +104,7 @@ class OgrFinder(object):
                 try:
                     ascii_path = path.encode('ascii')
                     yield {
-                        'path': ascii_path,
+                        'path': path,
                         'format': 'AVCBin',
                         'geomType': ogr.wkbGeometryCollection,
                         'geomText': self.GeomText[ogr.wkbGeometryCollection],
@@ -138,7 +138,7 @@ class OgrFinder(object):
                     try:
                         ascii_path = path.encode('ascii')
                         yield {
-                            'path': ascii_path,
+                            'path': path,
                             'name': sublayer.GetName(),
                             'layer': sublayer.GetName(),
                             'format': datasrc.GetDriver().GetName(),
@@ -257,7 +257,7 @@ def search_path(
     use_dir = 'dir' in use_gdal_on or 'dir' in use_ogr_on
     use_file = 'file' in use_gdal_on or 'file' in use_ogr_on
 
-    for base, dirs, files in os_walk(startdir.encode('utf-8'), topdown=True):
+    for base, dirs, files in os_walk(startdir, topdown=True):
 
         # print "%s: %d dirs, %d files" % (base, len(dirs), len(files))
 
@@ -321,7 +321,7 @@ def main():
 
     STARTDIR = sys.argv[1]
 
-    print "["
+    print("[")
 
     count = 0
 
@@ -361,8 +361,8 @@ def main():
         i['table_info'] = table_info
 
         if count:
-            print ','
-        print (json.dumps(i))
+            print(',')
+        print(json.dumps(i))
         count += 1
         if count > 100:
             pass
@@ -373,7 +373,7 @@ def main():
         top = sorted([(v, k) for k, v in open_time.items()], reverse=True)
         # pprint(top[:5])
 
-    print "]"
+    print("]")
 
 
 if __name__ == '__main__':
