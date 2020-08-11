@@ -12,7 +12,7 @@ from pprint import pprint
 
 import time
 
-open_time = {}
+OPEN_TIME = {}
 
 
 def os_walk(path, topdown=None):
@@ -89,11 +89,11 @@ class OgrFinder(object):
         if path.lower().endswith('.shx'):
             return
 
-        open_time['OGR ' + path] = time.time()
+        OPEN_TIME['OGR ' + path] = time.time()
 
         datasrc = ogr.OpenShared(path)
 
-        open_time['OGR ' + path] = time.time() - open_time['OGR ' + path]
+        OPEN_TIME['OGR ' + path] = time.time() - OPEN_TIME['OGR ' + path]
 
         if datasrc and datasrc.GetLayerCount():
 
@@ -203,14 +203,14 @@ class GdalFinder(object):
 
     def findOn(self, path):
 
-        open_time['GDAL ' + path] = time.time()
+        OPEN_TIME['GDAL ' + path] = time.time()
 
         stderr = sys.stderr
         sys.stderr = self.devnull
         datasrc = gdal.OpenShared(path)
         sys.stderr = stderr
 
-        open_time['GDAL ' + path] = time.time() - open_time['GDAL ' + path]
+        OPEN_TIME['GDAL ' + path] = time.time() - OPEN_TIME['GDAL ' + path]
 
         if datasrc:
 
@@ -250,6 +250,7 @@ def search_path(
     ogr_exclude=[],
 ):
 
+    # FIXME: refactor as prioritized list of finders
     if use_gdal_on:
         gfinder = GdalFinder()
     if use_ogr_on:
@@ -315,18 +316,28 @@ def search_path(
                         d['find_type'] = 'OGR file'
                         yield d
 
+def add_table_info(items):
+    for i in items:
+        if 'OGR' in i['find_type']:
+            OPEN_TIME['OGR TABLE ' + i['path']] = time.time()
+            table_info = OgrFinder.get_table_info(i['path'], i.get('layer'))
+            OPEN_TIME['OGR TABLE ' + i['path']] = (
+                time.time() - OPEN_TIME['OGR TABLE ' + i['path']]
+            )
+        else:
+            OPEN_TIME['GDAL TABLE ' + i['path']] = time.time()
+            table_info = GdalFinder.get_table_info(i['path'], i.get('layer'))
+            OPEN_TIME['GDAL TABLE ' + i['path']] = (
+                time.time() - OPEN_TIME['GDAL TABLE ' + i['path']]
+            )
 
-def main():
-    import sys
+        i['table_info'] = table_info
 
-    STARTDIR = sys.argv[1]
+        yield i
 
-    print("[")
-
-    count = 0
-
+def default_search(startdir):
     for i in search_path(
-        STARTDIR,
+        startdir,
         use_gdal_on=('dir', 'file'),  # 'dir',
         use_ogr_on=('file',),  # 'file',
         ogr_extensions=[
@@ -340,37 +351,28 @@ def main():
             '.mdb',
         ],
     ):
+        yield i
 
-        # if not i['path'].lower().endswith('.dbf'):
-        #     continue
-        # print(json.dumps(i))
 
-        if 'OGR' in i['find_type']:
-            open_time['OGR TABLE ' + i['path']] = time.time()
-            table_info = OgrFinder.get_table_info(i['path'], i.get('layer'))
-            open_time['OGR TABLE ' + i['path']] = (
-                time.time() - open_time['OGR TABLE ' + i['path']]
-            )
-        else:
-            open_time['GDAL TABLE ' + i['path']] = time.time()
-            table_info = GdalFinder.get_table_info(i['path'], i.get('layer'))
-            open_time['GDAL TABLE ' + i['path']] = (
-                time.time() - open_time['GDAL TABLE ' + i['path']]
-            )
+def main():
+    import sys
 
-        i['table_info'] = table_info
+    startdir = sys.argv[1]
 
-        if count:
+    print("[")
+
+    for n, i in enumerate(add_table_info(default_search(startdir))):
+
+        if n > 0:
             print(',')
         print(json.dumps(i))
-        count += 1
-        if count > 100:
+        if n > 100:
             pass
             # break
 
-        sys.stderr.write("%s %s\n" % (count, i['path']))
+        sys.stderr.write("%s %s\n" % (n, i['path']))
 
-        top = sorted([(v, k) for k, v in open_time.items()], reverse=True)
+        top = sorted([(v, k) for k, v in OPEN_TIME.items()], reverse=True)
         # pprint(top[:5])
 
     print("]")
